@@ -60,14 +60,26 @@ func TestBook_IsTaken(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "Book.IsTaken() 1",
-			fields: fields{},
-			want:   false,
+			name: "Book.IsTaken() 1",
+			fields: fields{
+				author:         "A",
+				publishingYear: 1975,
+				text:           "ab",
+				mu:             &sync.Mutex{},
+				isTaken:        false,
+			},
+			want: false,
 		},
 		{
-			name:   "Book.IsTaken() 2",
-			fields: fields{isTaken: true},
-			want:   true,
+			name: "Book.IsTaken() 2",
+			fields: fields{
+				author:         "A",
+				publishingYear: 1975,
+				text:           "ab",
+				mu:             &sync.Mutex{},
+				isTaken:        true,
+			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {
@@ -100,14 +112,26 @@ func TestBook_Put(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "Book.Put() 1",
-			fields: fields{},
-			want:   false,
+			name: "Book.Put() 1",
+			fields: fields{
+				author:         "A",
+				publishingYear: 1975,
+				text:           "ab",
+				mu:             &sync.Mutex{},
+				isTaken:        false,
+			},
+			want: false,
 		},
 		{
-			name:   "Book.Put() 2",
-			fields: fields{isTaken: true},
-			want:   false,
+			name: "Book.Put() 2",
+			fields: fields{
+				author:         "A",
+				publishingYear: 1975,
+				text:           "ab",
+				mu:             &sync.Mutex{},
+				isTaken:        true,
+			},
+			want: false,
 		},
 	}
 	for _, tt := range tests {
@@ -141,14 +165,26 @@ func TestBook_Take(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "Book.Take() 1",
-			fields: fields{},
-			want:   true,
+			name: "Book.Take() 1",
+			fields: fields{
+				author:         "A",
+				publishingYear: 1975,
+				text:           "ab",
+				mu:             &sync.Mutex{},
+				isTaken:        false,
+			},
+			want: true,
 		},
 		{
-			name:   "Book.Take() 2",
-			fields: fields{isTaken: true},
-			want:   true,
+			name: "Book.Take() 2",
+			fields: fields{
+				author:         "A",
+				publishingYear: 1975,
+				text:           "ab",
+				mu:             &sync.Mutex{},
+				isTaken:        true,
+			},
+			want: true,
 		},
 	}
 	for _, tt := range tests {

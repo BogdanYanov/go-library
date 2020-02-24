@@ -1,10 +1,8 @@
 package library
 
 import (
-	"bufio"
 	"context"
 	"fmt"
-	"io"
 	"math/rand"
 	"strings"
 	"sync"
@@ -55,34 +53,32 @@ func NewReader(ctx context.Context, ID int, lib *Library, winner chan *Reader, o
 }
 
 // Read randomly selects the position of the book in the library and reads the word from there
-func (r *Reader) Read() error {
+func (r *Reader) Read() {
 	var (
 		wastepaperPos        int
 		targetWastepaper     Wastepaper
-		lastReadingPos       int
 		targetWastepaperInfo *readingInfo
+		targetWastepaperText string
+		word                 string
+		wordEndByte          int
 	)
 
 	rand.Seed(time.Now().UnixNano())
 
-	//randomly choose a wastepaper from the library
 	wastepaperPos = rand.Intn(len(r.lib.wastepaper)) + 1
+
 	targetWastepaper = r.lib.GetWastepaper(wastepaperPos)
-	//if wastepaper is nil do nothing
 	if targetWastepaper == nil {
-		return nil
+		return
 	}
 
-	//if wastepaper is read at the previous iteration put it back
 	if targetWastepaper == r.lastWastepaper {
 		r.lib.PutWastepaper(targetWastepaper)
-		return nil
+		return
 	}
 
-	//else this wastepaper is last
 	r.lastWastepaper = targetWastepaper
 
-	//check whether this wastepaper have already read
 	if _, ok := r.wastepaperRead[targetWastepaper]; !ok {
 		r.wastepaperRead[targetWastepaper] = &readingInfo{
 			readText:       "",
@@ -91,62 +87,48 @@ func (r *Reader) Read() error {
 	}
 
 	targetWastepaperInfo = r.wastepaperRead[targetWastepaper]
-	//get last reading position
-	lastReadingPos = targetWastepaperInfo.lastReadingPos
-	//create Reader to read only one word
-	rd := strings.NewReader(targetWastepaper.GetText())
+
+	targetWastepaperText = targetWastepaper.GetText()
+
 	r.lib.PutWastepaper(targetWastepaper)
 
-	//if last reading position equal string length then return
-	if rd.Len() == lastReadingPos {
-		return nil
-	}
-	//move carriage to last reading position
-	_, err := rd.Seek(int64(lastReadingPos), io.SeekStart)
-	if err != nil {
-		return err
+	if len(targetWastepaperText) == targetWastepaperInfo.lastReadingPos {
+		return
 	}
 
-	//create buffer of countWordBytes() size
-	buf := make([]byte, countWordBytes(rd))
+	word, wordEndByte = countWordBytes(targetWastepaperText[targetWastepaperInfo.lastReadingPos:])
 
-	//move carriage to last reading position again
-	_, err = rd.Seek(int64(lastReadingPos), io.SeekStart)
-	if err != nil {
-		return err
-	}
+	targetWastepaperInfo.lastReadingPos += wordEndByte
+	targetWastepaperInfo.readText += word
 
-	//read word to buffer
-	_, err = rd.Read(buf)
-	if err != nil {
-		return err
-	}
-
-	//increase last reading position
-	lastReadingPos += len(buf)
-	//add a word to the read text
-	targetWastepaperInfo.readText += string(buf)
-	targetWastepaperInfo.lastReadingPos = lastReadingPos
 	r.wastepaperRead[targetWastepaper] = targetWastepaperInfo
-	//return carriage to compare length of reading text
-	rd.Seek(0, io.SeekStart)
-	if rd.Len() == lastReadingPos {
+
+	if len(targetWastepaperText) == targetWastepaperInfo.lastReadingPos {
 		r.wastepaperFinishReading = append(r.wastepaperFinishReading, targetWastepaper)
-		//if finish reading all wastepapers send myself to winner channel
+
 		if len(r.wastepaperFinishReading) == len(r.lib.wastepaper) {
 			r.once.Do(func() {
 				r.winner <- r
 			})
 		}
 	}
-
-	return nil
 }
 
-func countWordBytes(reader *strings.Reader) int {
-	r := bufio.NewReader(reader)
-	token, _ := r.ReadBytes(' ')
-	return len(token)
+func countWordBytes(text string) (string, int) {
+	var (
+		wordEndByte int
+		word        string
+	)
+
+	wordEndByte = strings.Index(text, " ")
+	if wordEndByte == -1 {
+		word = text[:]
+		wordEndByte = len(text)
+		return word, wordEndByte
+	}
+	word = text[:wordEndByte+1]
+	wordEndByte++
+	return word, wordEndByte
 }
 
 // WastepaperReadInfo displays information about wastepaper and the text read by the Reader

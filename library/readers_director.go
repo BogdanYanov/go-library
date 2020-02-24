@@ -2,7 +2,6 @@ package library
 
 import (
 	"context"
-	"log"
 	"sync"
 )
 
@@ -49,12 +48,7 @@ func (rd *ReadersDirector) StartWork() chan *Reader {
 					})
 					return
 				default:
-					err := reader.Read()
-					if err != nil {
-						log.Println(err)
-						log.Printf("Stop the reader#%d\n", reader.ID)
-						return
-					}
+					reader.Read()
 				}
 			}
 		}(rd.readers[i])

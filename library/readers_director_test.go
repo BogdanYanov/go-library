@@ -3,6 +3,7 @@ package library
 import (
 	"context"
 	"reflect"
+	"sync"
 	"testing"
 )
 
@@ -69,22 +70,72 @@ func TestNewReadersDirector(t *testing.T) {
 }
 
 func TestReadersDirector_StartWork(t *testing.T) {
-	var (
-		ctx, _     = context.WithCancel(context.Background())
-		lib        = NewLibrary()
-		readersNum = 2
-	)
+	var lib = NewLibrary()
 
 	lib.AddWastepaper(NewBook("A1", 1876, "abcd"))
 	lib.AddWastepaper(NewBook("A2", 1876, "efgh"))
 	lib.AddWastepaper(NewBook("A3", 1876, "ijkl"))
 
-	rd := NewReadersDirector(ctx, lib, readersNum)
+	type args struct {
+		lib        *Library
+		readersNum int
+	}
 
-	winnerCh := rd.StartWork()
+	tests := []struct {
+		name    string
+		args    args
+		canSend bool
+		do      func(wg *sync.WaitGroup, cancel context.CancelFunc)
+	}{
+		{
+			name: "StartWork() case 1",
+			args: args{
+				lib:        lib,
+				readersNum: 2,
+			},
+			canSend: false,
+			do: func(wg *sync.WaitGroup, cancel context.CancelFunc) {
+				cancel()
+				wg.Wait()
+			},
+		},
+		{
+			name: "StartWork() case 2",
+			args: args{
+				lib:        lib,
+				readersNum: 2,
+			},
+			canSend: true,
+			do: func(wg *sync.WaitGroup, cancel context.CancelFunc) {
+				wg.Wait()
+				cancel()
+			},
+		},
+	}
 
-	if winnerCh == nil {
-		t.Errorf("StartWork() channel != nil")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var canSend bool
+
+			ctx, cancel := context.WithCancel(context.Background())
+			wg := &sync.WaitGroup{}
+
+			rd := NewReadersDirector(ctx, tt.args.lib, tt.args.readersNum)
+
+			wg.Add(1)
+			go func() {
+				_, canSend = <-rd.winner
+				wg.Done()
+			}()
+
+			rd.StartWork()
+
+			tt.do(wg, cancel)
+
+			if tt.canSend != canSend {
+				t.Errorf("StartWork(): canSend = %v, want - %v", canSend, tt.canSend)
+			}
+		})
 	}
 
 }

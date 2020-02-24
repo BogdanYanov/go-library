@@ -175,10 +175,7 @@ func TestReader_Read(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.do()
 			r := NewReader(tt.fields.ctx, tt.fields.ID, tt.fields.lib, tt.fields.winner, tt.fields.once)
-			if err := r.Read(); err != nil {
-				t.Errorf("Read() error: %s", err)
-				return
-			}
+			r.Read()
 			if r.lastWastepaper != tt.lastWastepaper {
 				t.Errorf("Reader.lastWastepaper = %v, want - %v", r.lastWastepaper, tt.lastWastepaper)
 				return
@@ -188,94 +185,38 @@ func TestReader_Read(t *testing.T) {
 
 	// test reading the last wastepaper
 	var oldRInfo, newRInfo *readingInfo
+
 	r := NewReader(ctx, 0, lib, winner, once)
+
 	book.Put()
-	err := r.Read()
-	if err != nil {
-		t.Errorf("Read() error: %s", err)
-		return
-	}
+
+	r.Read()
+
 	oldRInfo, ok := r.wastepaperRead[book]
 	if !ok {
-		t.Errorf("Read() don`r read first book")
+		t.Errorf("Read() don`t read first book")
 		return
 	}
-	err = r.Read()
-	if err != nil {
-		t.Errorf("Read() error: %s", err)
-		return
-	}
+
+	go func() {
+		<-winner
+	}()
+
+	r.Read()
+
 	newRInfo = r.wastepaperRead[book]
 	if strings.Compare(oldRInfo.readText, newRInfo.readText) != 0 {
 		t.Errorf("Read() read the last wastepaper again")
 		return
 	}
 
-	// test errors
-	testErrors := []struct {
-		name     string
-		fields   fields
-		doFirst  func() *Library
-		doSecond func(r *Reader)
-		wantErr  bool
-	}{
-		{
-			name: "Read() test errors 1",
-			fields: fields{
-				ID:     0,
-				lib:    lib,
-				winner: winner,
-				once:   once,
-				ctx:    ctx,
-			},
-			doFirst: func() *Library {
-				go func() {
-					<-winner
-				}()
-				lib := NewLibrary()
-				lib.AddWastepaper(NewBook("Author", 1976, "abcd"))
-				return lib
-			},
-			doSecond: func(r *Reader) {
-				r.lastWastepaper = nil
-			},
-			wantErr: false,
-		},
-		{
-			name: "Read() test errors 2",
-			fields: fields{
-				ID:     0,
-				lib:    lib,
-				winner: winner,
-				once:   once,
-				ctx:    ctx,
-			},
-			doFirst: func() *Library {
-				lib := NewLibrary()
-				lib.AddWastepaper(NewBook("Author", 1976, "abcd abcd"))
-				return lib
-			},
-			doSecond: func(r *Reader) {
-				r.lastWastepaper = nil
-				rInfo := r.wastepaperRead[r.lib.wastepaper[0]]
-				rInfo.lastReadingPos = -15
-				r.wastepaperRead[lib.wastepaper[0]] = rInfo
-			},
-			wantErr: true,
-		},
-	}
-
-	for _, te := range testErrors {
-		t.Run(te.name, func(t *testing.T) {
-			r := NewReader(te.fields.ctx, te.fields.ID, te.fields.lib, te.fields.winner, te.fields.once)
-			r.lib = te.doFirst()
-			_ = r.Read()
-			te.doSecond(r)
-			if err := r.Read(); (err != nil) != te.wantErr {
-				t.Errorf("Read() error: %s, want - %v", err, te.wantErr)
-				return
-			}
-		})
+	r.lastWastepaper = nil
+	r.Read()
+	r.lastWastepaper = nil
+	r.Read()
+	newRInfo = r.wastepaperRead[book]
+	if strings.Compare(newRInfo.readText, book.GetText()) != 0 {
+		t.Errorf("Read(): readText = %s, want - %s", newRInfo.readText, book.GetText())
 	}
 }
 
@@ -296,10 +237,7 @@ Read text: abcd
 		<-winner
 	}()
 
-	err := reader.Read()
-	if err != nil {
-		t.Errorf("Read() error: %s", err)
-	}
+	reader.Read()
 
 	oldOutput := os.Stdout
 	r, w, _ := os.Pipe()
@@ -307,7 +245,7 @@ Read text: abcd
 
 	reader.WastepaperReadInfo()
 
-	err = w.Close()
+	err := w.Close()
 	if err != nil {
 		t.Errorf("Error closing pipe: %s\n", err)
 	}
@@ -327,7 +265,7 @@ Read text: abcd
 
 func Test_countWordBytes(t *testing.T) {
 	type args struct {
-		reader *strings.Reader
+		text string
 	}
 	tests := []struct {
 		name string
@@ -336,23 +274,23 @@ func Test_countWordBytes(t *testing.T) {
 	}{
 		{
 			name: "countWordBytes() 1",
-			args: args{strings.NewReader("abcd")},
+			args: args{"abcd"},
 			want: 4,
 		},
 		{
 			name: "countWordBytes() 2",
-			args: args{strings.NewReader("")},
+			args: args{""},
 			want: 0,
 		},
 		{
 			name: "countWordBytes() 3",
-			args: args{strings.NewReader("Some text")},
+			args: args{"Some text"},
 			want: 5,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := countWordBytes(tt.args.reader); got != tt.want {
+			if _, got := countWordBytes(tt.args.text); got != tt.want {
 				t.Errorf("countWordBytes() = %v, want %v", got, tt.want)
 			}
 		})

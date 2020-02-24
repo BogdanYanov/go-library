@@ -21,21 +21,16 @@ func (lib *Library) GetWastepaper(pos int) Wastepaper {
 	if pos > len(lib.wastepaper) || pos < 1 {
 		return nil
 	}
-	lib.wastepaper[pos-1].Lock()
 	if lib.wastepaper[pos-1].IsTaken() {
-		lib.wastepaper[pos-1].Unlock()
 		return nil
 	}
 	lib.wastepaper[pos-1].Take()
-	lib.wastepaper[pos-1].Unlock()
 	return lib.wastepaper[pos-1]
 }
 
 // PutWastepaper makes the wp Wastepaper available for reading
 func (lib *Library) PutWastepaper(wp Wastepaper) {
-	wp.Lock()
 	wp.Put()
-	wp.Unlock()
 }
 
 // AddWastepaper add wastepaper to library

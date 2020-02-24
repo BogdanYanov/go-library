@@ -10,19 +10,15 @@ import (
 	"time"
 )
 
-func generateSimpleString() (string, error) {
-	simpleText := "Lorem ipsum dolor sit amet, nostrud scribentur eam ad. Ea utamur aliquip corpora usu. " +
-		"Has in laboramus definitionem, sit ei fugit adipisci disputationi. Ea eos volumus theophrastus. Timeam aeterno interpretaris sed id, " +
-		"his no eros erroribus sadipscing. Sed cu apeirian persecuti, cum novum voluptatibus ne, ad nec quaestio adolescens. Cibo altera eos id. " +
-		"Luptatum moderatius vel no, qui at cetero intellegam, nobis audire ius te."
-	rd := strings.NewReader(simpleText)
+func generateSimpleString() string {
+	simpleText := "To wait for multiple goroutines to finish, we can use a wait group. This is the function we’ll run in every goroutine. Note that a WaitGroup must be passed to functions by pointer."
 	rand.Seed(time.Now().UnixNano())
-	buf := make([]byte, rand.Intn(rd.Len()-16)+16)
-	_, err := rd.Read(buf)
-	if err != nil {
-		return "", err
+	result := simpleText[:rand.Intn(len(simpleText)-16)+16+1]
+	wordEndByte := strings.LastIndex(result, " ")
+	if wordEndByte == -1 {
+		return result
 	}
-	return string(buf), nil
+	return result[:wordEndByte]
 }
 
 func main() {
@@ -33,8 +29,8 @@ func main() {
 		defaultPublishingYear = 1976
 		lib                   *library.Library
 		textSlice             []string
-		_                     chan *library.Reader
-		_                     *library.Reader
+		winnerCh              chan *library.Reader
+		winner                *library.Reader
 	)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -43,13 +39,9 @@ func main() {
 
 	textSlice = make([]string, 0, defaultBooksNum)
 
-	for i := 0; i < defaultBooksNum; i++ {
-		simpleText, err := generateSimpleString()
-		if err != nil {
-			log.Println(err)
-			i--
-			continue
-		}
+	textSlice = append(textSlice, "abcd")
+	for i := 1; i < defaultBooksNum; i++ {
+		simpleText := generateSimpleString()
 		textSlice = append(textSlice, simpleText)
 	}
 
@@ -59,15 +51,13 @@ func main() {
 
 	rd := library.NewReadersDirector(ctx, lib, defaultReadersNum)
 
-	_ = rd.StartWork()
+	winnerCh = rd.StartWork()
+
+	winner = <-winnerCh
 
 	cancel()
 
-	//winner = <-winnerCh
+	log.Printf("Winner - goroutine#%d\n", winner.ID)
 
-	//cancel()
-
-	//log.Printf("Winner - goroutine#%d\n", winner.ID)
-
-	//winner.WastepaperReadInfo()
+	winner.WastepaperReadInfo()
 }

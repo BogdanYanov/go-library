@@ -13,8 +13,6 @@ const yearOfFirstBook = 868
 type Wastepaper interface {
 	Take()
 	Put()
-	Lock()
-	Unlock()
 	GetText() string
 	IsTaken() bool
 	Info()
@@ -52,27 +50,23 @@ func NewBook(author string, publishingYear int, text string) Wastepaper {
 
 // Take forbids other readers to read this book
 func (b *Book) Take() {
+	b.mu.Lock()
 	b.isTaken = true
+	b.mu.Unlock()
 }
 
 // Put allows other readers to read this book.
 func (b *Book) Put() {
+	b.mu.Lock()
 	b.isTaken = false
+	b.mu.Unlock()
 }
 
 // IsTaken checks if the book is taken from the library
 func (b *Book) IsTaken() bool {
-	return b.isTaken
-}
-
-// Lock locks mu for book
-func (b *Book) Lock() {
 	b.mu.Lock()
-}
-
-// Unlock unlocks mu for book
-func (b *Book) Unlock() {
-	b.mu.Unlock()
+	defer b.mu.Unlock()
+	return b.isTaken
 }
 
 // GetText return text of book

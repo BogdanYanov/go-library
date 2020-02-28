@@ -15,13 +15,7 @@ type ReadersDirector struct {
 
 // NewReadersDirector creates new ReadersDirector
 func NewReadersDirector(ctx context.Context, lib *Library, readersNum int) *ReadersDirector {
-	if ctx == nil {
-		return nil
-	}
-	if lib == nil {
-		return nil
-	}
-	if readersNum < 1 {
+	if ctx == nil || lib == nil || readersNum < 1 {
 		return nil
 	}
 	rd := &ReadersDirector{

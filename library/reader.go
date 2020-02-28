@@ -29,16 +29,7 @@ type Reader struct {
 
 // NewReader creates new Reader
 func NewReader(ctx context.Context, ID int, lib *Library, winner chan *Reader, once *sync.Once) *Reader {
-	if ctx == nil {
-		return nil
-	}
-	if lib == nil {
-		return nil
-	}
-	if winner == nil {
-		return nil
-	}
-	if once == nil {
+	if ctx == nil || lib == nil || winner == nil || once == nil {
 		return nil
 	}
 	return &Reader{
@@ -65,6 +56,7 @@ func (r *Reader) Read() {
 
 	rand.Seed(time.Now().UnixNano())
 
+	// randomly select wastepaper from library
 	wastepaperPos = rand.Intn(len(r.lib.wastepaper)) + 1
 
 	targetWastepaper = r.lib.GetWastepaper(wastepaperPos)

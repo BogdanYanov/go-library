@@ -35,6 +35,7 @@ func NewBook(author string, publishingYear int, text string) Wastepaper {
 	if len(strings.TrimSpace(text)) == 0 {
 		return nil
 	}
+
 	yearNow := time.Now().Year()
 	if publishingYear < yearOfFirstBook || publishingYear > yearNow {
 		return nil
